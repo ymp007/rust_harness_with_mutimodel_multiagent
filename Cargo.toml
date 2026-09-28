@@ -1,0 +1,75 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/y-types",
+    "crates/y-arena",
+    "crates/y-reactor",
+    "crates/y-storage",
+    "crates/y-daemon",
+    "crates/y-cli",
+    "crates/y-shm",
+    "crates/y-sandbox",
+    "crates/y-mcp",
+    "crates/y-cache",
+    "crates/y-gateway",
+    "crates/y-inference-worker",
+    "crates/y-mesh",
+    "crates/y-telemetry",
+    "crates/y-core",
+    "crates/y-bench",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Y Code Core Systems Engineering Group"]
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/y-code/y-code"
+
+[workspace.dependencies]
+tokio = { version = "1.40", features = ["full"] }
+bytes = "1.7"
+rkyv = { version = "0.8", features = ["validation", "strict"] }
+blake3 = { version = "1.5", features = ["rayon"] }
+rusqlite = { version = "0.32", features = ["bundled", "modern_sqlite"] }
+parking_lot = "0.12"
+crossbeam-deque = "0.8"
+crossbeam-channel = "0.5"
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+sysinfo = "0.32"
+libloading = "0.8"
+criterion = { version = "0.5", features = ["async_tokio"] }
+uuid = { version = "1.10", features = ["v4", "serde"] }
+
+# Internal workspace crate dependencies
+y-types = { path = "crates/y-types" }
+y-arena = { path = "crates/y-arena" }
+y-reactor = { path = "crates/y-reactor" }
+y-storage = { path = "crates/y-storage" }
+y-shm = { path = "crates/y-shm" }
+y-sandbox = { path = "crates/y-sandbox" }
+y-mcp = { path = "crates/y-mcp" }
+y-cache = { path = "crates/y-cache" }
+y-gateway = { path = "crates/y-gateway" }
+y-mesh = { path = "crates/y-mesh" }
+y-telemetry = { path = "crates/y-telemetry" }
+y-core = { path = "crates/y-core" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+overflow-checks = false
+debug = false
+
+[profile.bench]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+debug = true

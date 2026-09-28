@@ -1,0 +1,26 @@
+[package]
+name = "y-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+bytes = { workspace = true }
+parking_lot = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+y-arena = { workspace = true }
+y-cache = { workspace = true }
+y-gateway = { workspace = true }
+y-mcp = { workspace = true }
+y-mesh = { workspace = true }
+y-reactor = { workspace = true }
+y-sandbox = { workspace = true }
+y-shm = { workspace = true }
+y-storage = { workspace = true }
+y-telemetry = { workspace = true }
+y-types = { workspace = true }

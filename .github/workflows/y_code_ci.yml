@@ -1,0 +1,45 @@
+name: Y Code Systems CI & Verification Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  format_and_clippy:
+    name: Formatting & Lint Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Verify Formatting
+        run: cargo fmt --all -- --check
+      - name: Run Clippy Linter
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  test_matrix:
+    name: Multi-Platform Test Matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-14 ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run Full Workspace Test Suite
+        run: cargo test --workspace --all-features -- --nocapture
+
+  guardrails_and_benchmarks:
+    name: Performance Guardrails Audit
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build Release Binaries
+        run: cargo build --release --workspace
+      - name: Run Systems Benchmark Suite
+        run: .\target\release\y-bench.exe

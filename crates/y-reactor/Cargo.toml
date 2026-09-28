@@ -1,0 +1,18 @@
+[package]
+name = "y-reactor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+bytes = { workspace = true }
+parking_lot = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+y-arena = { workspace = true }
+y-storage = { workspace = true }
+y-types = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
