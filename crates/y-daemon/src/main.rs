@@ -1,4 +1,5 @@
 mod ipc;
+mod web;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -32,6 +33,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )));
 
     info!("Y Code Session Reactor initialized. Session ID: {}", session_id);
+
+    // Spawn zero-overhead embedded web dashboard on port 4040
+    let web_reactor = reactor.clone();
+    let web_arena = arena.clone();
+    tokio::spawn(async move {
+        if let Err(e) = web::run_web_server(4040, web_reactor, web_arena).await {
+            tracing::error!("Web dashboard server failed: {e}");
+        }
+    });
 
     #[cfg(windows)]
     ipc::run_windows_ipc_server(reactor).await?;
