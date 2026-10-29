@@ -1,9 +1,9 @@
+#![forbid(unsafe_code)]
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Duration;
 use tracing::info;
 
-pub use y_arena::WorkingArena;
+pub use y_arena::{WorkingArena, DEFAULT_IDLE_HYSTERESIS};
 pub use y_cache::RadixPrefixCache;
 pub use y_gateway::{ShadowWorkerSupervisor, SseStreamParser, StreamCancellationToken};
 pub use y_mcp::{McpTool, ToolOutputSanitizer};
@@ -23,6 +23,7 @@ pub struct YCodeEngine {
     cache: Arc<RadixPrefixCache>,
     mesh: Arc<ActorMesh>,
     telemetry: Arc<HardwareEnergyMeter>,
+    watchdog: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl YCodeEngine {
@@ -35,8 +36,9 @@ impl YCodeEngine {
         let mesh = Arc::new(ActorMesh::new());
         let telemetry = Arc::new(HardwareEnergyMeter::new());
 
-        // Spawn memory hysteresis watchdog
-        arena.purger().spawn_watchdog(Duration::from_millis(500));
+        // Idle watchdog. Absent when no Tokio runtime is active, which is a
+        // supported state for this synchronous constructor.
+        let watchdog = arena.spawn_idle_watchdog(DEFAULT_IDLE_HYSTERESIS / 10);
 
         Ok(Self {
             arena,
@@ -44,6 +46,7 @@ impl YCodeEngine {
             cache,
             mesh,
             telemetry,
+            watchdog,
         })
     }
 
@@ -73,7 +76,17 @@ impl YCodeEngine {
     }
 
     pub fn shutdown(&self) {
+        if let Some(handle) = &self.watchdog {
+            handle.abort();
+        }
         self.storage.shutdown();
-        info!("Y Code Core Engine cleanly shut down.");
+        if self.storage.is_degraded() {
+            tracing::error!(
+                evicted_deltas = self.storage.evicted_deltas(),
+                "Y Code Core Engine shut down with storage degraded; some turns may be missing."
+            );
+        } else {
+            info!("Y Code Core Engine cleanly shut down.");
+        }
     }
 }

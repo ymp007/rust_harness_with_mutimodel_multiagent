@@ -29,7 +29,10 @@ pub enum ToolAction {
 /// 10-Point Zero-Allocation Lifecycle Hook Trait (Dyn-Compatible)
 pub trait AgentLifecycleHook: Send + Sync {
     /// 1. Fired during session creation
-    fn on_agent_init<'a>(&'a self, _session_id: &'a SessionId) -> BoxFuture<'a, Result<(), AgentError>> {
+    fn on_agent_init<'a>(
+        &'a self,
+        _session_id: &'a SessionId,
+    ) -> BoxFuture<'a, Result<(), AgentError>> {
         Box::pin(async { Ok(()) })
     }
 

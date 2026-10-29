@@ -6,19 +6,58 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ycode-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
 jobs:
   format_and_clippy:
     name: Formatting & Lint Verification
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ runner.os }}
       - name: Verify Formatting
         run: cargo fmt --all -- --check
       - name: Run Clippy Linter
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+  msrv_check:
+    name: Minimum Supported Rust Version
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.89.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: msrv-${{ runner.os }}
+      - name: Check Against Declared MSRV
+        run: cargo check --workspace --all-targets --locked
+
+  dependency_audit:
+    name: Dependency Security & License Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@cargo-deny
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo-deny
+        run: cargo deny check advisories licenses bans sources
 
   test_matrix:
     name: Multi-Platform Test Matrix
@@ -27,19 +66,62 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest, macos-14 ]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ runner.os }}
       - name: Run Full Workspace Test Suite
-        run: cargo test --workspace --all-features -- --nocapture
+        run: cargo test --workspace --all-features --locked
+      - name: CLI Smoke Test Without API Key
+        run: cargo run --locked -p y-cli --bin ycode -- --help
+      - name: Install MCP Reference Servers For Interoperability Checks
+        run: npm install --prefix target/mcp-interoperability --ignore-scripts --no-audit --no-fund @modelcontextprotocol/server-everything@2026.8.31 @modelcontextprotocol/server-filesystem@2026.8.31 @modelcontextprotocol/server-memory@2026.8.31 @modelcontextprotocol/sdk@1.32.1
+      - name: MCP Reference Server Interoperability Without LLM Credentials
+        run: node scripts/verify_mcp.mjs
 
-  guardrails_and_benchmarks:
-    name: Performance Guardrails Audit
-    runs-on: windows-latest
+  guardrails:
+    name: Performance Guardrails
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Build Release Binaries
-        run: cargo build --release --workspace
-      - name: Run Systems Benchmark Suite
-        run: .\target\release\y-bench.exe
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: guardrails-${{ runner.os }}
+      # Release only: the thresholds are performance budgets, and y-bench exits
+      # non-zero when any of them is breached.
+      - name: Build Release Benchmarks
+        run: cargo build --release --locked -p y-bench
+      - name: Enforce Guardrails
+        run: ./target/release/y-bench
+
+  release_ycode:
+    name: Build ycode Release
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-14 ]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ runner.os }}
+      - name: Build Release CLI
+        run: cargo build --release --locked -p y-cli --bin ycode
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ycode-${{ matrix.os }}
+          path: |
+            target/release/ycode
+            target/release/ycode.exe
+          if-no-files-found: error

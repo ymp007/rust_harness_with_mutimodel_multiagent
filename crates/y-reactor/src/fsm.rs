@@ -38,20 +38,20 @@ impl TurnFsm {
     }
 
     pub fn transition_to(&mut self, next: TurnState) -> Result<(), String> {
-        let valid = match (self.state, next) {
-            (TurnState::Created, TurnState::Starting) => true,
-            (TurnState::Starting, TurnState::ContextAssembling) => true,
-            (TurnState::Starting, TurnState::Aborted) => true,
-            (TurnState::ContextAssembling, TurnState::ModelGenerating) => true,
-            (TurnState::ModelGenerating, TurnState::ToolExecuting) => true,
-            (TurnState::ModelGenerating, TurnState::Finalizing) => true,
-            (TurnState::ToolExecuting, TurnState::ModelGenerating) => true,
-            (TurnState::ToolExecuting, TurnState::Finalizing) => true,
-            (TurnState::Finalizing, TurnState::Completed) => true,
-            (_, TurnState::Failed) => true,
-            (_, TurnState::Aborted) => true,
-            _ => false,
-        };
+        let valid = !self.is_terminal()
+            && matches!(
+                (self.state, next),
+                (TurnState::Created, TurnState::Starting)
+                    | (TurnState::Starting, TurnState::ContextAssembling)
+                    | (TurnState::ContextAssembling, TurnState::ModelGenerating)
+                    | (TurnState::ModelGenerating, TurnState::ToolExecuting)
+                    | (TurnState::ModelGenerating, TurnState::Finalizing)
+                    | (TurnState::ToolExecuting, TurnState::ModelGenerating)
+                    | (TurnState::ToolExecuting, TurnState::Finalizing)
+                    | (TurnState::Finalizing, TurnState::Completed)
+                    | (_, TurnState::Failed)
+                    | (_, TurnState::Aborted)
+            );
 
         if valid {
             self.state = next;

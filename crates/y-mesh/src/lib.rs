@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 pub mod actor;
 pub mod mailbox;
 

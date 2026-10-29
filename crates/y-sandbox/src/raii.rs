@@ -7,14 +7,14 @@ pub const MAX_ACTIVE_HANDLES_CAP: usize = 128;
 
 #[derive(Debug)]
 pub struct HandleGuardTable {
-    active_count: Mutex<usize>,
+    active_count: Arc<Mutex<usize>>,
     max_cap: usize,
 }
 
 impl HandleGuardTable {
     pub fn new(max_cap: usize) -> Self {
         Self {
-            active_count: Mutex::new(0),
+            active_count: Arc::new(Mutex::new(0)),
             max_cap,
         }
     }
@@ -35,44 +35,29 @@ impl HandleGuardTable {
         *count += 1;
         debug!("Acquired handle slot. Active: {}/{}", *count, self.max_cap);
         Ok(HandleGuard {
-            table_count: Arc::new(self.active_count_ptr()),
+            table_count: self.active_count.clone(),
         })
     }
 
     pub fn active_handles(&self) -> usize {
         *self.active_count.lock()
     }
-
-    fn active_count_ptr(&self) -> HandleCounter {
-        HandleCounter {
-            count: &self.active_count as *const Mutex<usize> as usize,
-        }
-    }
 }
-
-// Internal pointer wrapper to decrement count on drop safely
-#[derive(Clone)]
-struct HandleCounter {
-    count: usize,
-}
-
-unsafe impl Send for HandleCounter {}
-unsafe impl Sync for HandleCounter {}
 
 pub struct HandleGuard {
-    table_count: Arc<HandleCounter>,
+    table_count: Arc<Mutex<usize>>,
 }
 
 impl Drop for HandleGuard {
     fn drop(&mut self) {
-        let ptr = self.table_count.count as *const Mutex<usize>;
-        unsafe {
-            let mutex = &*ptr;
-            let mut count = mutex.lock();
-            if *count > 0 {
-                *count -= 1;
-                debug!("Released handle slot. Active: {}", *count);
-            }
-        }
+        let mut count = self.table_count.lock();
+        // Surface an imbalanced release in debug builds instead of silently
+        // clamping, which would hide the accounting error.
+        debug_assert!(
+            *count > 0,
+            "HandleGuard released without a matching acquire"
+        );
+        *count = count.saturating_sub(1);
+        debug!("Released handle slot. Active: {}", *count);
     }
 }

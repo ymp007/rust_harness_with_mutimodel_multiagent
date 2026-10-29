@@ -1,5 +1,5 @@
-use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 use parking_lot::Mutex;
+use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 
 #[derive(Debug, Clone, Copy)]
 pub struct EnergySnapshot {

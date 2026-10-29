@@ -15,9 +15,14 @@ async fn test_y_code_engine_lifecycle_and_turn() {
         .await
         .expect("Turn execution failed");
 
-    assert_eq!(summary.prompt_tokens, 128);
-    assert_eq!(summary.completion_tokens, 64);
+    // Token counts are derived from the assembled history, not fixed literals.
+    assert!(summary.prompt_tokens > 0);
+    assert!(summary.completion_tokens > 0);
     assert_eq!(session.session().turn_count, 1);
+    assert_eq!(
+        session.session().total_prompt_tokens,
+        u64::from(summary.prompt_tokens)
+    );
 
     // Verify telemetry
     let snapshot = engine.telemetry().capture_snapshot();

@@ -22,6 +22,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.89"
 authors = ["Y Code Core Systems Engineering Group"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/y-code/y-code"
@@ -29,7 +30,6 @@ repository = "https://github.com/y-code/y-code"
 [workspace.dependencies]
 tokio = { version = "1.40", features = ["full"] }
 bytes = "1.7"
-rkyv = { version = "0.8", features = ["validation", "strict"] }
 blake3 = { version = "1.5", features = ["rayon"] }
 rusqlite = { version = "0.32", features = ["bundled", "modern_sqlite"] }
 parking_lot = "0.12"
@@ -41,9 +41,9 @@ serde_json = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 sysinfo = "0.32"
-libloading = "0.8"
-criterion = { version = "0.5", features = ["async_tokio"] }
 uuid = { version = "1.10", features = ["v4", "serde"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+futures-util = "0.3"
 
 # Internal workspace crate dependencies
 y-types = { path = "crates/y-types" }
@@ -64,9 +64,14 @@ opt-level = 3
 lto = "fat"
 codegen-units = 1
 panic = "abort"
-strip = true
-overflow-checks = false
-debug = false
+# Keep line tables so a shipped crash is diagnosable; strip only the symbols
+# that carry no debugging value.
+debug = 1
+strip = "debuginfo"
+# Cursor arithmetic in y-shm and offset math in y-arena rely on checked or
+# explicitly wrapping semantics. With overflow checks off, a slip wraps
+# silently; with panic=abort there is no unwind to report it.
+overflow-checks = true
 
 [profile.bench]
 opt-level = 3

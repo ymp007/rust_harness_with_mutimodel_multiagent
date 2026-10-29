@@ -6,5 +6,24 @@
 .DS_Store
 Thumbs.db
 
+# Runtime state. SQLite databases and their -wal/-shm sidecars must never be
+# committed: they are per-machine and are rewritten on every daemon run.
+.ycode/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
 *.db*
 
+# Local operator credentials.
+.env
+.env.*
+!.env.example
+.openrouter_key
+scripts/.openrouter_key
+
+# Editor / OS state
+.idea/
+.vscode/

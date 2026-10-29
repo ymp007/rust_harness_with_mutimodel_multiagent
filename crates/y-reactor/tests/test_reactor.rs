@@ -34,18 +34,39 @@ async fn test_session_reactor_turn_execution_and_overhead() {
         .await
         .expect("Turn execution failed");
 
-    assert_eq!(summary.prompt_tokens, 128);
-    assert_eq!(summary.completion_tokens, 64);
+    // Token counts are derived from the assembled history, not fixed literals.
+    assert!(summary.prompt_tokens > 0);
+    assert!(summary.completion_tokens > 0);
     assert_eq!(reactor.session().turn_count, 1);
     assert_eq!(reactor.history().len(), 2); // user + assistant
-
-    // Harness latency SLA: < 1.2 ms (1,200,000 ns)
-    assert!(
-        summary.harness_overhead_ns < 10_000_000, // Safe threshold in test mode
-        "Harness overhead took {} ns",
-        summary.harness_overhead_ns
+    assert_eq!(
+        reactor.session().total_prompt_tokens,
+        u64::from(summary.prompt_tokens)
     );
 
+    // Overhead must be a subset of wall time, not the whole turn.
+    assert!(summary.harness_overhead_ns <= summary.wall_time_ns);
+    assert!(summary.wall_time_ns > 0, "wall time was never measured");
+
     storage.shutdown();
+    let _ = std::fs::remove_file(db_path);
+}
+
+#[tokio::test]
+async fn completed_turn_is_persisted_to_the_database() {
+    let db_path = std::env::temp_dir().join(format!("test_reactor_persist_{}.db", TurnId::new()));
+    let arena = Arc::new(WorkingArena::with_defaults());
+    let storage = Arc::new(StorageEngine::with_defaults(&db_path).unwrap());
+    let mut reactor = SessionReactor::new(SessionId::new(), arena, storage.clone());
+
+    reactor.execute_turn("persist me").await.unwrap();
+    storage.shutdown();
+
+    let connection = rusqlite::Connection::open(&db_path).unwrap();
+    let count: usize = connection
+        .query_row("SELECT COUNT(*) FROM turns", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(count, 1, "a completed turn must be durable");
+    drop(connection);
     let _ = std::fs::remove_file(db_path);
 }

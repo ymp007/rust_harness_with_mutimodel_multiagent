@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 pub mod raii;
 pub mod tier1_wasm;
 pub mod tier2_os;

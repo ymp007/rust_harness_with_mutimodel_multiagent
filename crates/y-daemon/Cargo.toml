@@ -2,6 +2,7 @@
 name = "y-daemon"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 
@@ -15,6 +16,7 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 y-arena = { workspace = true }
+y-gateway = { workspace = true }
 y-reactor = { workspace = true }
 y-storage = { workspace = true }
 y-types = { workspace = true }

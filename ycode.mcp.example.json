@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "git": {
+      "command": "uvx",
+      "args": ["mcp-server-git", "--repository", "${YCODE_WORKSPACE}"],
+      "read_only_tools": ["git_status", "git_diff", "git_log", "git_show"]
+    },
+    "remote": {
+      "type": "http",
+      "url": "https://example.com/mcp",
+      "bearer_env": "MY_MCP_TOKEN",
+      "disabled": true
+    }
+  }
+}

@@ -2,6 +2,7 @@
 name = "y-reactor"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 
@@ -15,4 +16,4 @@ y-storage = { workspace = true }
 y-types = { workspace = true }
 
 [dev-dependencies]
-criterion = { workspace = true }
+rusqlite = { workspace = true }
